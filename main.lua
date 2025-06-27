@@ -5,11 +5,19 @@ local nextTriggerTime
 local minDelay
 local maxDelay
 local player
+local score
+local frames
+
+local moveIndex
+local listOfMove = { "right", "down", "left", "up" }
 
 function love.load()
     listOfEnemy = {}
     listOfBalls = {}
 
+    moveIndex = 1
+    frames = 0
+    score = 0
 
     timer = 0
     nextTriggerTime = 0
@@ -34,6 +42,7 @@ function checkCollision()
             for z, enemy in ipairs(listOfEnemy) do
                 if enemy.x <= ball.x + ball.width and ball.x <= enemy.x + enemy.width and enemy.y <= ball.y + ball.height and ball.y <= enemy.y + enemy.height then
                     if ball.friendly then
+                        score = score + enemy.point
                         table.remove(listOfBalls, x)
                         table.remove(listOfEnemy, z)
                     end
@@ -53,10 +62,10 @@ function generateFirstsEnemies()
 
     for i = 1, stages, 1 do
         for x = 1, enemy_per_stage, 1 do
-            generateEnemy(enemy_x_pos, enemy_y_pos, i)
+            generateEnemy(enemy_x_pos, enemy_y_pos, i, (stages * enemy_per_stage))
             enemy_x_pos = enemy_x_pos + 50
         end
-        enemy_x_pos = 200
+        enemy_x_pos = 150
         enemy_y_pos = enemy_y_pos + 50
     end
 end
@@ -88,7 +97,7 @@ function generateMunition(element, friendly, reverse)
     table.insert(listOfBalls, ball)
 end
 
-function generateEnemy(x, y, stage)
+function generateEnemy(x, y, stage, point)
     local enemy = {}
 
     enemy.x = x
@@ -97,6 +106,7 @@ function generateEnemy(x, y, stage)
     enemy.height = 30
     enemy.speed = 100
     enemy.stage = stage
+    enemy.point = point * stage
 
     table.insert(listOfEnemy, enemy)
 end
@@ -112,7 +122,24 @@ function love.keypressed(key)
     end
 end
 
+function moveEnemies(move, padding)
+    for index, value in ipairs(listOfEnemy) do
+        if listOfEnemy[index] then
+            if move == "left" then
+                listOfEnemy[index].x = listOfEnemy[index].x - padding
+            elseif move == "right" then
+                listOfEnemy[index].x = listOfEnemy[index].x + padding
+            elseif move == "up" then
+                listOfEnemy[index].y = listOfEnemy[index].y - padding
+            elseif move == "down" then
+                listOfEnemy[index].y = listOfEnemy[index].y + padding
+            end
+        end
+    end
+end
+
 function love.update(dt)
+    frames = frames + 1
     for i, v in ipairs(listOfBalls) do
         if v.reverse then
             v.y = v.y + v.speed * dt
@@ -122,6 +149,18 @@ function love.update(dt)
     end
 
     timer = timer + dt
+
+    if frames == 30 then
+        moveEnemies(listOfMove[moveIndex], 15)
+
+        if moveIndex > #listOfMove - 1 then
+            moveIndex = 1
+        else
+            moveIndex = moveIndex + 1
+        end
+
+        frames = 0
+    end
 
     if timer >= nextTriggerTime then
         for i = #listOfEnemy - 9, #listOfEnemy do
@@ -133,7 +172,7 @@ function love.update(dt)
     end
 
     if love.keyboard.isDown("right") then
-        if player.x < (love.graphics.getHeight() - player.width) then
+        if player.x < (love.graphics.getWidth() - player.width) then
             player.x = math.max(0, player.x + player.speed * dt)
         end
     end
@@ -153,8 +192,10 @@ function love.draw(dt)
     love.graphics.print("Player X: " .. player.x, 50, 20)
     love.graphics.print("Number of munitions shot: " .. #listOfBalls, 50, 30)
     love.graphics.print("Number of enemies: " .. #listOfEnemy, 50, 40)
+    love.graphics.print("Score : " .. score, 60, 550)
     love.graphics.print("Temps restant avant le prochain déclenchement: " .. math.floor(nextTriggerTime - timer) .. "s",
         50, 50)
+    love.graphics.print("Next move: " .. listOfMove[moveIndex], 50, 80)
 
     for i, v in ipairs(listOfEnemy) do
         if v.x and v.y and v.width and v.height then
