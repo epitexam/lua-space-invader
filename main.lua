@@ -7,9 +7,12 @@ local maxDelay
 local player
 local score
 local frames
-
+local limitFrames
 local moveIndex
-local listOfMove = { "right", "down", "left", "up" }
+local stages
+local enemy_per_stage
+local moveFrame
+local listOfMove = { "right", "right", "down", "down", "left", "left", "up", "up" }
 
 function love.load()
     listOfEnemy = {}
@@ -17,6 +20,10 @@ function love.load()
 
     moveIndex = 1
     frames = 0
+    stages = 5
+    enemy_per_stage = 10
+    moveFrame = 6
+    limitFrames = 60
     score = 0
 
     timer = 0
@@ -25,52 +32,64 @@ function love.load()
     maxDelay = 3
 
     player = {}
-
     player.x = 400
     player.y = 530
-    player.width = 50
-    player.height = 50
+    player.width = 20
+    player.height = 20
     player.speed = 350
     player.alive = true
 
     generateFirstsEnemies()
 end
 
+function collision(a, b)
+    return a.x < b.x + b.width and
+        b.x < a.x + a.width and
+        a.y < b.y + b.height and
+        b.y < a.y + a.height
+end
+
 function checkCollision()
-    for x, ball in ipairs(listOfBalls) do
+    for i = #listOfBalls, 1, -1 do
+        local ball = listOfBalls[i]
         if ball.friendly then
-            for z, enemy in ipairs(listOfEnemy) do
-                if enemy.x <= ball.x + ball.width and ball.x <= enemy.x + enemy.width and enemy.y <= ball.y + ball.height and ball.y <= enemy.y + enemy.height then
-                    if ball.friendly then
+            for j = #listOfEnemy, 1, -1 do
+                local enemy = listOfEnemy[j]
+                if collision(ball, enemy) then
+                    if player.alive then
                         score = score + enemy.point
-                        table.remove(listOfBalls, x)
-                        table.remove(listOfEnemy, z)
                     end
+                    table.remove(listOfBalls, i)
+                    table.remove(listOfEnemy, j)
+                    break
                 end
             end
         else
-
+            if collision(ball, player) then
+                player.alive = false
+            end
         end
     end
 end
 
 function generateFirstsEnemies()
-    local enemy_x_pos = 150
-    local enemy_y_pos = 50
-    local stages = 5
-    local enemy_per_stage = 10
+    local startX = 150
+    local startY = 50
+    local spacingX = 55
+    local spacingY = 50
+    local totalEnemies = stages * enemy_per_stage
 
-    for i = 1, stages, 1 do
-        for x = 1, enemy_per_stage, 1 do
-            generateEnemy(enemy_x_pos, enemy_y_pos, i, (stages * enemy_per_stage))
-            enemy_x_pos = enemy_x_pos + 50
+    for row = 0, stages - 1 do
+        for col = 0, enemy_per_stage - 1 do
+            local x = startX + col * spacingX
+            local y = startY + row * spacingY
+            local stage = row + 1
+            generateEnemy(x, y, stage, totalEnemies)
         end
-        enemy_x_pos = 150
-        enemy_y_pos = enemy_y_pos + 50
     end
 end
 
-function cleanMunition(listOfBalls)
+function cleanMunition()
     for index, value in ipairs(listOfBalls) do
         if value.y < 0 or value.y > love.graphics.getHeight() then
             table.remove(listOfBalls, index)
@@ -78,19 +97,19 @@ function cleanMunition(listOfBalls)
     end
 end
 
+function createEntity(x, y, width, height, speed)
+    return {
+        x = x,
+        y = y,
+        width = width,
+        height = height,
+        speed = speed or 0
+    }
+end
+
 function generateMunition(element, friendly, reverse)
-    local ball = {}
-
-    ball.x = element.x + (element.width / 2)
-    ball.y = element.y
-    ball.width = 5
-    ball.height = 20
-
-    if friendly then
-        ball.speed = 550
-    else
-        ball.speed = 600
-    end
+    local ball = createEntity(friendly and (element.x + element.width / 2) or (element.x + element.width / 3), element.y,
+        5, 20, friendly and 200 or 140)
     ball.friendly = friendly
     ball.reverse = reverse
 
@@ -98,13 +117,7 @@ function generateMunition(element, friendly, reverse)
 end
 
 function generateEnemy(x, y, stage, point)
-    local enemy = {}
-
-    enemy.x = x
-    enemy.y = y
-    enemy.width = 30
-    enemy.height = 30
-    enemy.speed = 100
+    local enemy = createEntity(x, y, 30, 30, 20 + (stage - 1) * 10)
     enemy.stage = stage
     enemy.point = point * stage
 
@@ -113,7 +126,7 @@ end
 
 function resetTriggerTime()
     nextTriggerTime = love.math.random(minDelay, maxDelay)
-    timer = 0 -- Réinitialise le timer
+    timer = 0
 end
 
 function love.keypressed(key)
@@ -150,9 +163,17 @@ function love.update(dt)
 
     timer = timer + dt
 
-    if frames == 30 then
-        moveEnemies(listOfMove[moveIndex], 15)
+    if frames == limitFrames * moveFrame then
+        local totalEnemies = stages * enemy_per_stage
 
+        if #listOfEnemy > 0 then
+            local enemyRatio = #listOfEnemy / totalEnemies
+            local minFrame = 1
+            local maxFrame = 6
+            moveFrame = math.max(minFrame, math.floor(minFrame + (maxFrame - minFrame) * enemyRatio))
+        end
+
+        moveEnemies(listOfMove[moveIndex], 20)
         if moveIndex > #listOfMove - 1 then
             moveIndex = 1
         else
@@ -184,18 +205,22 @@ function love.update(dt)
     end
 
     checkCollision()
-    cleanMunition(listOfBalls)
+    cleanMunition()
 end
 
-function love.draw(dt)
+function love.draw()
     love.graphics.print("Player Y: " .. player.y, 50, 10)
-    love.graphics.print("Player X: " .. player.x, 50, 20)
-    love.graphics.print("Number of munitions shot: " .. #listOfBalls, 50, 30)
-    love.graphics.print("Number of enemies: " .. #listOfEnemy, 50, 40)
+    love.graphics.print("Player X: " .. player.x, 50, 30)
+    love.graphics.print("Number of munitions shot: " .. #listOfBalls, 50, 50)
+    love.graphics.print("Number of enemies: " .. #listOfEnemy, 50, 70)
     love.graphics.print("Score : " .. score, 60, 550)
     love.graphics.print("Temps restant avant le prochain déclenchement: " .. math.floor(nextTriggerTime - timer) .. "s",
-        50, 50)
-    love.graphics.print("Next move: " .. listOfMove[moveIndex], 50, 80)
+        50, 90)
+    love.graphics.print("Next move: " .. listOfMove[moveIndex], 50, 110)
+    love.graphics.print("limitFrame: " .. limitFrames, 50, 130)
+    love.graphics.print("moveFrame: " .. moveFrame, 50, 150)
+    love.graphics.print("percentage of enemies left : " .. (#listOfEnemy / stages * enemy_per_stage) .. "%", 50, 170)
+    love.graphics.print("Player is alive ? : " .. tostring(player.alive), 50, 190)
 
     for i, v in ipairs(listOfEnemy) do
         if v.x and v.y and v.width and v.height then
