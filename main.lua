@@ -37,6 +37,7 @@ function love.load()
     player.width = 20
     player.height = 20
     player.speed = 350
+    player.lives = 3
     player.alive = true
 
     generateFirstsEnemies()
@@ -90,9 +91,9 @@ function generateFirstsEnemies()
 end
 
 function cleanMunition()
-    for index, value in ipairs(listOfBalls) do
-        if value.y < 0 or value.y > love.graphics.getHeight() then
-            table.remove(listOfBalls, index)
+    for i = #listOfBalls, 1, -1 do
+        if listOfBalls[i].y < 0 or listOfBalls[i].y > love.graphics.getHeight() then
+            table.remove(listOfBalls, i)
         end
     end
 end
@@ -136,60 +137,26 @@ function love.keypressed(key)
 end
 
 function moveEnemies(move, padding)
-    for index, value in ipairs(listOfEnemy) do
-        if listOfEnemy[index] then
-            if move == "left" then
-                listOfEnemy[index].x = listOfEnemy[index].x - padding
-            elseif move == "right" then
-                listOfEnemy[index].x = listOfEnemy[index].x + padding
-            elseif move == "up" then
-                listOfEnemy[index].y = listOfEnemy[index].y - padding
-            elseif move == "down" then
-                listOfEnemy[index].y = listOfEnemy[index].y + padding
-            end
+    for _, enemy in ipairs(listOfEnemy) do
+        if move == "left" then
+            enemy.x = enemy.x - padding
+        elseif move == "right" then
+            enemy.x = enemy.x + padding
+        elseif move == "up" then
+            enemy.y = enemy.y - padding
+        elseif move == "down" then
+            enemy.y = enemy.y + padding
         end
     end
 end
 
 function love.update(dt)
-    frames = frames + 1
     for i, v in ipairs(listOfBalls) do
         if v.reverse then
             v.y = v.y + v.speed * dt
         else
             v.y = v.y - v.speed * dt
         end
-    end
-
-    timer = timer + dt
-
-    if frames == limitFrames * moveFrame then
-        local totalEnemies = stages * enemy_per_stage
-
-        if #listOfEnemy > 0 then
-            local enemyRatio = #listOfEnemy / totalEnemies
-            local minFrame = 1
-            local maxFrame = 6
-            moveFrame = math.max(minFrame, math.floor(minFrame + (maxFrame - minFrame) * enemyRatio))
-        end
-
-        moveEnemies(listOfMove[moveIndex], 20)
-        if moveIndex > #listOfMove - 1 then
-            moveIndex = 1
-        else
-            moveIndex = moveIndex + 1
-        end
-
-        frames = 0
-    end
-
-    if timer >= nextTriggerTime then
-        for i = #listOfEnemy - 9, #listOfEnemy do
-            if (listOfEnemy[i]) then
-                generateMunition(listOfEnemy[i], false, true)
-            end
-        end
-        resetTriggerTime()
     end
 
     if love.keyboard.isDown("right") then
@@ -201,6 +168,45 @@ function love.update(dt)
     if love.keyboard.isDown("left") then
         if player.x > 0 then
             player.x = math.max(0, player.x - player.speed * dt)
+        end
+    end
+
+
+    if #listOfEnemy > 0 then
+        frames = frames + 1
+        timer = timer + dt
+
+        if frames == limitFrames * moveFrame then
+            local totalEnemies = stages * enemy_per_stage
+
+            if #listOfEnemy > 0 then
+                local enemyRatio = #listOfEnemy / totalEnemies
+                local minFrame = 1
+                local maxFrame = 8
+                moveFrame = math.max(minFrame, math.floor(minFrame + (maxFrame - minFrame) * enemyRatio))
+            end
+
+            moveEnemies(listOfMove[moveIndex], 20)
+
+            if moveIndex > #listOfMove - 1 then
+                moveIndex = 1
+                for index, value in ipairs(listOfEnemy) do
+                    value.y = value.y + 10
+                end
+            else
+                moveIndex = moveIndex + 1
+            end
+
+            frames = 0
+        end
+
+        if timer >= nextTriggerTime then
+            for i = #listOfEnemy - math.random(1, 9), #listOfEnemy do
+                if (listOfEnemy[i]) then
+                    generateMunition(listOfEnemy[i], false, true)
+                end
+            end
+            resetTriggerTime()
         end
     end
 
