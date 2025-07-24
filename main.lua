@@ -1,3 +1,6 @@
+local timeSinceLastCall = 0
+local nextCallDelay = math.random(1, 3)
+
 local game = {
     enemies = {},
     balls = {},
@@ -10,8 +13,7 @@ local game = {
 }
 
 local config = {
-    ENEMY_MOVE_FRAME = 6,
-    FRAME_LIMIT = 60,
+    GAME_STATE = "play",
     MAX_FRAME = 100,
     MIN_SHOOT_DELAY = 1,
     MAX_SHOOT_DELAY = 3,
@@ -24,12 +26,26 @@ local player = {
     width = 20,
     height = 20,
     speed = 350,
-    lives = 3,
     alive = true
 }
 
+function resetGame()
+    game.enemies = {}
+    game.balls = {}
+    game.score =0 
+
+    player.x = love.graphics.getWidth() /2
+    player.y = love.graphics.getHeight() - 50
+    player.alive = true
+
+    generateEnemies()
+
+    config.GAME_STATE = "play"
+end
+
 function love.load()
-    generateFirstsEnemies()
+    generateEnemies()
+    math.randomseed(os.time())
 end
 
 function collision(a, b)
@@ -41,60 +57,66 @@ end
 
 function checkEnemyCollisions()
     local toRemoveBalls = {}
-    local toRemoveEnemies = {}
     
-    for i, ball in ipairs(game.balls) do
+    for i = #game.balls, 1, -1 do
+        local ball = game.balls[i]
         if ball.friendly then
-            for j, enemy in ipairs(game.enemies) do
-                if collision(ball, enemy) then
-                    table.insert(toRemoveBalls, i)
-                    table.insert(toRemoveEnemies, j)
-                    game.score = game.score + enemy.point
-                    break
+            for col = 1, #game.enemies do
+                local column = game.enemies[col]
+                for row = 1, #column do
+                    local enemy = column[row]
+                    if collision(ball, enemy) then
+                        game.score = game.score + enemy.point
+                        table.remove(column, row)
+                        table.remove(game.balls, i)
+                        break
+                    end
                 end
             end
         end
     end
-
-    for i = #toRemoveEnemies, 1, -1 do
-        table.remove(game.enemies, toRemoveEnemies[i])
-    end
-
-    for i = #toRemoveBalls, 1, -1 do
-        table.remove(game.balls, toRemoveBalls[i])
-    end
 end
+
+function countRemainingEnemies()
+    local count = 0
+    for _, column in ipairs(game.enemies) do
+        count = count + #column
+    end
+    return count
+end
+
 
 function checkPlayerCollisions()
     for i, ball in ipairs(game.balls) do
         if not ball.friendly and collision(ball, player) then
             player.alive = false
+            config.GAME_STATE = "dead"
             table.remove(game.balls, i)
             break
         end
     end
 end
 
-function generateFirstsEnemies()
-    local startX = 150
-    local startY = 50
-    local spacingX = 55
-    local spacingY = 50
-    local totalEnemies = game.stages * game.enemiesPerStage
+function generateEnemies()
+    local startX, startY = 150, 50
+    local spacingX, spacingY = 55, 50
 
-    for row = 0, game.stages - 1 do
-        for col = 0, game.enemiesPerStage - 1 do
-            local x = startX + col * spacingX
-            local y = startY + row * spacingY
-            local stage = row + 1
-            generateEnemy(x, y, stage, totalEnemies)
+    for x = 0, game.enemiesPerStage - 1 do
+        local column = {}
+        for y = 0, game.stages - 1 do
+            local ex = startX + x * spacingX
+            local ey = startY + y * spacingY
+            generateEnemy(ex, ey, y,column)
         end
+        table.insert(game.enemies, column)
     end
 end
 
-function cleanMunition()
+function removeOffscreenProjectiles()
+    local screenHeight = love.graphics.getHeight()
     for i = #game.balls, 1, -1 do
-        if game.balls[i].y < 0 or game.balls[i].y > love.graphics.getHeight() then
+        local y = game.balls[i].y
+        if y < -50 or y > screenHeight + 50 then
             table.remove(game.balls, i)
         end
     end
@@ -117,25 +139,49 @@ function updateBalls(dt)
     end
 end
 
-function generateBall(element, friendly, reverse)
-    local ball = createEntity(friendly and (element.x + element.width / 2) or (element.x + element.width / 3), element.y,5, 20, friendly and 200 or 140)
-    ball.friendly = friendly
-    ball.reverse = reverse
+function generateBall(source, friendly)
+    local xOffset = friendly and source.width / 2 or source.width / 3
+    local speed = friendly and 200 or 140
 
+    local ball = createEntity(source.x + xOffset, source.y, 5, 20, speed)
+    ball.friendly = friendly
+    ball.reverse = not friendly
     table.insert(game.balls, ball)
 end
-
-function generateEnemy(x, y, stage, point)
+function generateEnemy(x, y, stage,list)
     local enemy = createEntity(x, y, 30, 30, 20 + (stage - 1) * 10)
     enemy.stage = stage
-    enemy.point = 10 * stage
+    
+    if stage == 0 then
+        enemy.point = 30
+    elseif stage <= 2 then
+        enemy.point = 20
+    else
+        enemy.point = 10
+    end
 
-    table.insert(game.enemies, enemy)
+    table.insert(list, enemy)
 end
 
 function love.keypressed(key)
     if key == "space" then
-        generateBall(player, true, false)
+        generateBall(player, true)
+    end
+
+    if key == "p" then
+        print(config.GAME_STATE)
+        if config.GAME_STATE == "play" then
+            config.GAME_STATE = "pause"
+        else
+            config.GAME_STATE = "play"
+        end
+    end
+
+    if key == "r" then
+        print(config.GAME_STATE)
+        if config.GAME_STATE == "dead" then
+            resetGame()
+        end
     end
 end
 
@@ -152,10 +198,11 @@ function moveEnemies(move, padding)
         dy = padding
     end
     
-    for i = 1, #game.enemies do
-        local enemy = game.enemies[i]
-        enemy.x = enemy.x + dx
-        enemy.y = enemy.y + dy
+    for _, enemiesColumn in ipairs(game.enemies) do
+        for _, enemy in ipairs(enemiesColumn) do
+            enemy.x = enemy.x + dx
+            enemy.y = enemy.y + dy
+        end
     end
 end
 
@@ -171,72 +218,94 @@ function updatePlayer(dt)
 end
 
 function enemiesMovementBehavior()
-    local windowWidth = love.graphics.getWidth()
-    local margin = config.MESSAGE_Y
+    local leftLimit, rightLimit = config.MESSAGE_Y, love.graphics.getWidth() - config.MESSAGE_Y
 
-    for _, enemy in ipairs(game.enemies) do
-        if enemy.x <= margin then
-            game.currentMove = "right"
-            game.moveDown = true
-            break
-        elseif enemy.x >= (windowWidth - margin) then
-            game.currentMove = "left"
-            game.moveDown = true
-            break
+    for _, column in ipairs(game.enemies) do
+        for _, enemy in ipairs(column) do
+            if enemy.x <= leftLimit then
+                game.currentMove = "right"
+                game.moveDown = true
+                return
+            elseif enemy.x >= rightLimit then
+                game.currentMove = "left"
+                game.moveDown = true
+                return
+            end
         end
     end
 end
 
 function enemiesShootBehavior()
+    for _, column in ipairs(game.enemies) do
+        local shooter = column[#column]
+        if shooter then
+            generateBall(shooter, false)
+        end
+    end
 end
 
 function love.update(dt)
+    if config.GAME_STATE == "play" then
+        game.frames = game.frames + 1
 
-    game.frames = game.frames + 1
+        if game.frames == config.MAX_FRAME then
+            moveEnemies(game.currentMove, 5)
+            game.frames = 0
 
-    if game.frames == config.MAX_FRAME then  
-        moveEnemies(game.currentMove, 5)
-        game.frames = 0
-
-        if game.moveDown then
-            game.moveDown = false
-            moveEnemies("down", 10)
+            if game.moveDown then
+                moveEnemies("down", 10)
+                game.moveDown = false
+            end
         end
-    end
 
-    enemiesShootBehavior()
-    enemiesMovementBehavior()
-    updatePlayer(dt)
-    updateBalls(dt)
-    checkEnemyCollisions()
-    checkPlayerCollisions()
-    cleanMunition()
+        timeSinceLastCall = timeSinceLastCall + dt
+        if timeSinceLastCall >= nextCallDelay then
+            enemiesShootBehavior()
+            timeSinceLastCall = 0
+            nextCallDelay = math.random(config.MIN_SHOOT_DELAY, config.MAX_SHOOT_DELAY)
+        end
+
+        enemiesMovementBehavior()
+        updatePlayer(dt)
+        updateBalls(dt)
+        checkEnemyCollisions()
+        checkPlayerCollisions()
+        removeOffscreenProjectiles()
+    end
 end
 
 function love.draw()
-    love.graphics.print("Player Y: " .. player.y, config.MESSAGE_Y, 10)
-    love.graphics.print("Player X: " .. player.x, config.MESSAGE_Y, 30)
-    love.graphics.print("Number of munitions shot: " .. #game.balls, config.MESSAGE_Y, 50)
-    love.graphics.print("Number of enemies: " .. #game.enemies, config.MESSAGE_Y, 70)
-    love.graphics.print("Score : " .. game.score, 40, 550)
-    love.graphics.print("Current Move: " .. game.currentMove, config.MESSAGE_Y, 110)
-    love.graphics.print("limitFrame: " .. config.FRAME_LIMIT, config.MESSAGE_Y, 130)
-    love.graphics.print("config.ENEMY_MOVE_FRAME: " .. config.ENEMY_MOVE_FRAME, config.MESSAGE_Y, 150)
-    love.graphics.print("percentage of enemies left : " .. (#game.enemies / game.stages * game.enemiesPerStage) .. "%", config.MESSAGE_Y, 170)
-    love.graphics.print("Player is alive ? : " .. tostring(player.alive), config.MESSAGE_Y, 190)
-    love.graphics.print("FPS: " .. love.timer.getFPS(), config.MESSAGE_Y, 210)
+    local y = config.MESSAGE_Y
+    local dy = 20
 
-    for i, v in ipairs(game.enemies) do
-        if v.x and v.y and v.width and v.height then
-            love.graphics.rectangle("line", v.x, v.y, v.width, v.height)
-        else
-            love.graphics.print("Invalid enemy data at index " .. i, 200, 200)
+    love.graphics.print("Ennemis restants : " .. countRemainingEnemies(), config.MESSAGE_Y, y); y = y + dy
+    love.graphics.print("Score : " .. game.score, config.MESSAGE_Y, y); y = y + dy
+    love.graphics.print("FPS: " .. love.timer.getFPS(), config.MESSAGE_Y, y); y = y + dy
+
+
+    if config.GAME_STATE == "play" or config.GAME_STATE == "pause" then
+        for i, v in ipairs(game.balls) do
+            love.graphics.rectangle("fill", v.x, v.y, v.width, v.height)
+        end
+
+        love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
+
+
+        for i, enemiesColumn in ipairs(game.enemies) do
+            for y, v in ipairs(enemiesColumn) do
+                if v.x and v.y and v.width and v.height then
+                    love.graphics.rectangle("line", v.x, v.y, v.width, v.height)
+                end
+            end
         end
     end
 
-    for i, v in ipairs(game.balls) do
-        love.graphics.rectangle("fill", v.x, v.y, v.width, v.height)
+    if config.GAME_STATE == "pause" then
+        love.graphics.print("Le jeu est en pause, veuillez appuyer sur la touche 'P' pour continuer à jouer.",config.MESSAGE_Y, y); y = y + dy
     end
 
-    love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
+    if config.GAME_STATE == "dead" then
+        love.graphics.print("Vous avez perdu, veuillez appuyer sur R pour commencer une nouvelle partie.",config.MESSAGE_Y, y); y = y + dy
+    end
+
 end
