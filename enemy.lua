@@ -97,3 +97,11 @@ function checkEnemyCollisions()
         end
     end
 end
+
+function enemyReachedPlayer()
+    local firstEnemy = game.enemies[#game.enemies]
+
+    if firstEnemy.y == player.y - 40 then
+        config.GAME_STATE = "dead"
+    end
+end
