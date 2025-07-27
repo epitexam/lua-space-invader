@@ -1,6 +1,10 @@
 function generateEnemies()
-    local startX, startY = 150, 50
     local spacingX, spacingY = 55, 50
+    local screenWidth = love.graphics.getWidth()
+    local totalWidth = (game.enemiesPerStage - 1) * spacingX
+
+    local startX = (screenWidth / 2) - (totalWidth / 2)
+    local startY = 50
 
     for col = 0, game.enemiesPerStage - 1 do
         for row = 0, game.stages - 1 do
@@ -93,4 +97,3 @@ function checkEnemyCollisions()
         end
     end
 end
-
