@@ -25,11 +25,3 @@ function resetGame()
 
     config.GAME_STATE = "play"
 end
-
-function countRemainingEnemies()
-    local count = 0
-    for _, column in ipairs(game.enemies) do
-        count = count + #column
-    end
-    return count
-end

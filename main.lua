@@ -44,7 +44,7 @@ function love.draw()
     local y = config.MESSAGE_Y
     local dy = 20
 
-    love.graphics.print("Ennemis restants : " .. countRemainingEnemies(), config.MESSAGE_Y, y); y = y + dy
+    love.graphics.print("Ennemis restants : " .. #game.enemies, config.MESSAGE_Y, y); y = y + dy
     love.graphics.print("Score : " .. game.score, config.MESSAGE_Y, y); y = y + dy
     love.graphics.print("FPS: " .. love.timer.getFPS(), config.MESSAGE_Y, y); y = y + dy
 
@@ -55,19 +55,19 @@ function love.draw()
 
         love.graphics.rectangle("fill", player.x, player.y, player.width, player.height)
 
-        for i, enemiesColumn in ipairs(game.enemies) do
-            for y, v in ipairs(enemiesColumn) do
-                if v.x and v.y and v.width and v.height then
-                    love.graphics.rectangle("line", v.x, v.y, v.width, v.height)
-                end
+        for __, v in ipairs(game.enemies) do
+            if v.x and v.y and v.width and v.height then
+                love.graphics.rectangle("line", v.x, v.y, v.width, v.height)
             end
         end
     end
 
     if config.GAME_STATE == "pause" then
-        love.graphics.print("Le jeu est en pause, veuillez appuyer sur la touche 'P' pour continuer à jouer.",config.MESSAGE_Y, y)
+        love.graphics.print("Le jeu est en pause, veuillez appuyer sur la touche 'P' pour continuer à jouer.",
+            config.MESSAGE_Y, y)
     elseif config.GAME_STATE == "dead" then
-        love.graphics.print("Vous avez perdu, veuillez appuyer sur R pour commencer une nouvelle partie.",config.MESSAGE_Y, y)
+        love.graphics.print("Vous avez perdu, veuillez appuyer sur R pour commencer une nouvelle partie.",
+            config.MESSAGE_Y, y)
     end
 end
 
