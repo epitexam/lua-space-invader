@@ -1,4 +1,4 @@
-require("config")
+ require("config")
 require("utils")
 require("game")
 require("player")
@@ -11,6 +11,15 @@ function love.load()
 end
 
 function love.update(dt)
+
+    if player.shootStatus then
+        if player.cooldown == 0  then
+            player.cooldown = config.PLAYER_COOLDOWN
+            player.shootStatus = false
+        else
+            player.cooldown =  player.cooldown - 1
+        end
+    end
     if config.GAME_STATE == "play" then
         game.frames = game.frames + 1
 

@@ -1,10 +1,12 @@
 player = {
-    x = love.graphics.getWidth() /2,
+    x = love.graphics.getWidth() / 2,
     y = love.graphics.getHeight() - 50,
     width = 20,
     height = 20,
     speed = 350,
-    alive = true
+    alive = true,
+    cooldown = config.PLAYER_COOLDOWN,
+    shootStatus = false
 }
 
 function updatePlayer(dt)
@@ -31,7 +33,10 @@ end
 
 function handleKeyPress(key)
     if key == "space" then
-        generateBall(player, true)
+        if not player.shootStatus then
+            generateBall(player, true)
+            player.shootStatus = true
+        end
     elseif key == "p" then
         if config.GAME_STATE == "play" then
             config.GAME_STATE = "pause"
