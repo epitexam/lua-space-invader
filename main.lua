@@ -10,6 +10,20 @@ function love.load()
     math.randomseed(os.time())
 end
 
+function drawSpaceBackground()
+    love.graphics.clear(0, 0, 0)
+
+    love.graphics.setColor(1, 1, 1)
+
+    for i = 1, config.STAR_COUNT do
+        local x = (i * 37) % love.graphics.getWidth()
+        local y = (i * 53) % love.graphics.getHeight()
+        love.graphics.points(x, y)
+    end
+
+    love.graphics.setColor(1, 1, 1, 1)
+end
+
 function love.update(dt)
     if player.shootStatus then
         if player.cooldown == 0 then
@@ -52,6 +66,8 @@ end
 function love.draw()
     local screenWidth = love.graphics.getWidth()
     local screenHeight = love.graphics.getHeight()
+
+    drawSpaceBackground()
 
     love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.rectangle("fill", config.MESSAGE_Y - 10, config.MESSAGE_Y - 10, 250, 80)
