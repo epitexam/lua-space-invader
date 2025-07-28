@@ -1,10 +1,10 @@
 function generateEnemies()
-    local spacingX, spacingY = 55, 50
+    local spacingX, spacingY = config.ELEMENT_SPACING + 5, config.ELEMENT_SPACING
     local screenWidth = love.graphics.getWidth()
     local totalWidth = (game.enemiesPerStage - 1) * spacingX
 
     local startX = (screenWidth / 2) - (totalWidth / 2)
-    local startY = 50
+    local startY = config.ELEMENT_SPACING
 
     for col = 0, game.enemiesPerStage - 1 do
         for row = 0, game.stages - 1 do
@@ -103,5 +103,20 @@ function enemyReachedPlayer()
 
     if firstEnemy.y == player.y - 40 then
         config.GAME_STATE = "dead"
+    end
+end
+
+function UpdateSpeedByRemainingEnemies()
+    local totalEnemies = game.enemiesPerStage * game.stages
+    local percentRemaining = (#game.enemies / totalEnemies) * 100
+
+    if percentRemaining <= 60 and percentRemaining > 50 then
+        config.ENEMY_HORIZONTAL_MOVE = 20
+    elseif percentRemaining <= 50 and percentRemaining > 30 then
+        config.ENEMY_HORIZONTAL_MOVE = 45
+    elseif percentRemaining <= 30 then
+        config.ENEMY_HORIZONTAL_MOVE = 70
+    else
+        config.ENEMY_HORIZONTAL_MOVE = 10
     end
 end

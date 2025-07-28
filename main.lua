@@ -60,6 +60,7 @@ function love.update(dt)
         checkPlayerCollisions()
         removeOffscreenProjectiles()
         enemyReachedPlayer()
+        UpdateSpeedByRemainingEnemies()
     end
 end
 
@@ -71,7 +72,6 @@ function love.draw()
 
     love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.rectangle("fill", config.MESSAGE_Y - 10, config.MESSAGE_Y - 10, 250, 80)
-
     love.graphics.setColor(1, 1, 1, 1)
     local y = config.MESSAGE_Y
     local dy = 20

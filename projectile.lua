@@ -19,7 +19,7 @@ function removeOffscreenProjectiles()
     local screenHeight = love.graphics.getHeight()
     for i = #game.balls, 1, -1 do
         local y = game.balls[i].y
-        if y < -50 or y > screenHeight + 50 then
+        if y < -config.ELEMENT_SPACING or y > screenHeight + config.ELEMENT_SPACING then
             table.remove(game.balls, i)
         end
     end

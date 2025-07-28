@@ -1,6 +1,6 @@
 player = {
     x = love.graphics.getWidth() / 2,
-    y = love.graphics.getHeight() - 50,
+    y = love.graphics.getHeight() - config.ELEMENT_SPACING,
     width = 20,
     height = 20,
     speed = 350,

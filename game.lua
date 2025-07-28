@@ -3,8 +3,8 @@ game = {
     balls = {},
     score = 0,
     frames = 0,
-    stages = 6,
-    enemiesPerStage = 11,
+    stages = 5,
+    enemiesPerStage = 10,
     currentMove = "left",
     moveDown = false
 }
@@ -18,7 +18,7 @@ function resetGame()
     game.score = 0
 
     player.x = love.graphics.getWidth() /2
-    player.y = love.graphics.getHeight() - 50
+    player.y = love.graphics.getHeight() - config.ELEMENT_SPACING
     player.alive = true
 
     generateEnemies()
