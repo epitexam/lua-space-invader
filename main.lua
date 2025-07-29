@@ -33,7 +33,13 @@ function love.update(dt)
             player.cooldown = player.cooldown - 1
         end
     end
+
     if config.GAME_STATE == "play" then
+
+        if #game.enemies == 0 then
+            config.GAME_STATE = "win"
+        end
+
         game.frames = game.frames + 1
 
         if game.frames == config.MAX_FRAME then
@@ -105,6 +111,10 @@ function love.draw()
     elseif config.GAME_STATE == "dead" then
         love.graphics.setColor(1, 0.4, 0.4)
         love.graphics.printf("Vous avez perdu\nAppuyez sur 'R' pour recommencer", 0, screenHeight / 2 - 20, screenWidth,
+            "center")
+    elseif config.GAME_STATE == "win" then
+        love.graphics.setColor(1, 0.4, 0.4)
+        love.graphics.printf("Vous avez gagne\nAppuyez sur 'R' pour commencer une nouvelle partie !", 0, screenHeight / 2 - 20, screenWidth,
             "center")
     end
 

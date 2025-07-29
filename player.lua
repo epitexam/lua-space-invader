@@ -43,7 +43,9 @@ function handleKeyPress(key)
         else
             config.GAME_STATE = "play"
         end
-    elseif key == "r" and config.GAME_STATE == "dead" then
-        resetGame()
+    elseif key == "r" then
+        if config.GAME_STATE == "dead" or  config.GAME_STATE == "win" then
+            resetGame()
+        end
     end
 end
