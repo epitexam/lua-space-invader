@@ -101,7 +101,7 @@ end
 function enemyReachedPlayer()
     local firstEnemy = game.enemies[#game.enemies]
 
-    if firstEnemy.y == player.y - 40 then
+    if firstEnemy and firstEnemy.y == player.y - 40 then
         config.GAME_STATE = "dead"
     end
 end
