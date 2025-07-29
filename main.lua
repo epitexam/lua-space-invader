@@ -113,7 +113,7 @@ function love.draw()
         love.graphics.printf("Vous avez perdu\nAppuyez sur 'R' pour recommencer", 0, screenHeight / 2 - 20, screenWidth,
             "center")
     elseif config.GAME_STATE == "win" then
-        love.graphics.setColor(1, 0.4, 0.4)
+        love.graphics.setColor(0.2, 1, 0.2)
         love.graphics.printf("Vous avez gagne\nAppuyez sur 'R' pour commencer une nouvelle partie !", 0, screenHeight / 2 - 20, screenWidth,
             "center")
     end
